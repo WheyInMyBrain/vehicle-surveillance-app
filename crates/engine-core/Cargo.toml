@@ -1,0 +1,11 @@
+[package]
+name = "engine-core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+petgraph.workspace = true
+ordered-float.workspace = true
+serde.workspace = true
+chrono.workspace = true
+thiserror.workspace = true

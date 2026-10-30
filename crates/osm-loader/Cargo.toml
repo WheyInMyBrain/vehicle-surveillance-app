@@ -1,0 +1,11 @@
+[package]
+name = "osm-loader"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+engine-core = { path = "../engine-core" }
+osmpbf.workspace = true
+rayon.workspace = true
+ahash.workspace = true
+thiserror.workspace = true

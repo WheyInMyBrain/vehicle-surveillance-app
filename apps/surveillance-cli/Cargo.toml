@@ -1,0 +1,15 @@
+[package]
+name = "surveillance-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+engine-core = { path = "../../crates/engine-core" }
+osm-loader = { path = "../../crates/osm-loader" }
+trip-simulator = { path = "../../crates/trip-simulator" }
+trajectory-resolver = { path = "../../crates/trajectory-resolver" }
+network-optimizer = { path = "../../crates/network-optimizer" }
+
+rand.workspace = true
+petgraph.workspace = true
+serde_json.workspace = true

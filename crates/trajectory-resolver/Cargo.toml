@@ -1,0 +1,13 @@
+[package]
+name = "trajectory-resolver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+engine-core = { path = "../engine-core" }
+petgraph.workspace = true
+ordered-float.workspace = true
+chrono.workspace = true
+
+[dev-dependencies]
+rand.workspace = true

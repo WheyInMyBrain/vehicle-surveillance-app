@@ -1,0 +1,29 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/*",
+    "apps/*",
+    
+]
+
+[workspace.dependencies]
+# Performance Graph & Math
+petgraph = "0.8.3"
+geo = "0.33.1"
+ordered-float = "5.5.0"
+
+# PBF reader
+osmpbf = "0.3.8"
+
+# Data parallelism 
+rayon = "1.10" 
+
+# Serialization & Datetime
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+chrono = { version = "0.4.45", features = ["serde"] }
+
+# Utility
+thiserror = "2.0.21"
+rand = "0.10.3"
+ahash = "0.8.11"
