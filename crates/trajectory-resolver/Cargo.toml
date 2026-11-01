@@ -8,6 +8,10 @@ engine-core = { path = "../engine-core" }
 petgraph.workspace = true
 ordered-float.workspace = true
 chrono.workspace = true
+ahash.workspace = true
 
 [dev-dependencies]
+osm-loader = { path = "../osm-loader" }
+trip-simulator = { path = "../trip-simulator" }
+network-optimizer = { path = "../network-optimizer" }
 rand.workspace = true

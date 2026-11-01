@@ -1,4 +1,4 @@
 /target
+/data
 
-*.osm.pbf
 cameras_registry.json

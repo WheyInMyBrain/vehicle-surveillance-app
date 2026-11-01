@@ -4,6 +4,27 @@ use serde::{Deserialize, Serialize};
 pub type NodeId = u64;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum RoadSurface {
+    Asphalt,
+    Paved,
+    Cobblestone,
+    Unpaved,
+    Unknown,
+}
+
+impl RoadSurface {
+    pub fn friction_multiplier(&self) -> f64 {
+        match self {
+            RoadSurface::Asphalt => 1.00,
+            RoadSurface::Paved => 0.95,
+            RoadSurface::Cobblestone => 0.75,
+            RoadSurface::Unpaved => 0.55,
+            RoadSurface::Unknown => 0.90,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum HighwayType {
     Motorway,
     Trunk,
@@ -11,8 +32,10 @@ pub enum HighwayType {
     Secondary,
     Tertiary,
     Residential,
+    LivingStreet,
     Unclassified,
     Service,
+    Track,
 }
 
 impl HighwayType {
@@ -20,12 +43,14 @@ impl HighwayType {
         match self {
             HighwayType::Motorway => 70.0 / 3.6,
             HighwayType::Trunk => 60.0 / 3.6,
-            HighwayType::Primary => 50.0 / 3.6,
-            HighwayType::Secondary => 40.0 / 3.6,
-            HighwayType::Tertiary => 32.0 / 3.6,
+            HighwayType::Primary => 45.0 / 3.6,
+            HighwayType::Secondary => 35.0 / 3.6,
+            HighwayType::Tertiary => 25.0 / 3.6,
             HighwayType::Residential => 20.0 / 3.6,
+            HighwayType::LivingStreet => 15.0 / 3.6,
             HighwayType::Unclassified => 22.0 / 3.6,
-            HighwayType::Service => 15.0 / 3.6,
+            HighwayType::Service => 12.0 / 3.6,
+            HighwayType::Track => 10.0 / 3.6,
         }
     }
 
@@ -36,9 +61,11 @@ impl HighwayType {
             HighwayType::Primary => 0.80,
             HighwayType::Secondary => 0.95,
             HighwayType::Tertiary => 1.10,
-            HighwayType::Residential => 1.50,
+            HighwayType::Residential => 1.45,
+            HighwayType::LivingStreet => 1.80,
             HighwayType::Unclassified => 1.30,
-            HighwayType::Service => 2.00,
+            HighwayType::Service => 2.10,
+            HighwayType::Track => 2.50,
         }
     }
 }
@@ -47,13 +74,24 @@ impl HighwayType {
 pub struct NodeMeta {
     pub lat: f64,
     pub lon: f64,
+    pub has_traffic_signal: bool,
+    pub has_speed_bump: bool,
+    pub is_intersection: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EdgeMeta {
+    pub name: Option<String>,
     pub length_m: f64,
     pub highway_type: HighwayType,
+    pub maxspeed_kmh: Option<f64>,
+    pub lanes: Option<u8>,
+    pub surface: RoadSurface,
     pub bearing_deg: f64,
+    pub is_oneway: bool,
+    pub is_bridge: bool,
+    pub is_tunnel: bool,
+    pub layer: i8,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

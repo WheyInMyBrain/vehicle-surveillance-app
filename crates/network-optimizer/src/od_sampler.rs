@@ -3,11 +3,14 @@ use petgraph::graph::NodeIndex;
 use petgraph::visit::EdgeRef;
 use petgraph::Direction;
 use rand::seq::IndexedRandom;
+use rand::RngExt;
 use rayon::prelude::*;
 
 pub type DirectedEdge = (NodeId, NodeId);
 
-/// Generates balanced synthetic traffic corridors across the road network in parallel.
+/// Generates a realistic hybrid traffic corridor mix:
+/// - 50% arterial highway shortest paths (commuters, taxis)
+/// - 50% stochastic chaotic wanders (local deliveries, bypass runs)
 pub fn generate_synthetic_od_corridors(
     city: &CityGraph,
     num_trips: usize,
@@ -18,34 +21,91 @@ pub fn generate_synthetic_od_corridors(
         return vec![];
     }
 
-    // Parallel chunk generation via Rayon
-    (0..num_trips)
+    let arterial_count = num_trips / 2;
+    let chaotic_count = num_trips - arterial_count;
+
+    // 1. Arterial Commute Corridors
+    let arterial_corridors: Vec<Vec<DirectedEdge>> = (0..arterial_count)
         .into_par_iter()
         .filter_map(|_| {
             let mut rng = rand::rng();
-            let src_idx = *all_node_indices.choose(&mut rng)?;
-            let dst_idx = *all_node_indices.choose(&mut rng)?;
-
-            if src_idx == dst_idx {
+            let src = *all_node_indices.choose(&mut rng)?;
+            let dst = *all_node_indices.choose(&mut rng)?;
+            if src == dst {
                 return None;
             }
 
-            // Dijkstra with road hierarchy penalties
-            let node_path = find_hierarchy_path(city, src_idx, dst_idx)?;
-
-            if node_path.len() >= min_intersections {
-                let mut edge_path = Vec::with_capacity(node_path.len() - 1);
-                for window in node_path.windows(2) {
-                    let u_id = city.reverse_node_map[&window[0]];
-                    let v_id = city.reverse_node_map[&window[1]];
-                    edge_path.push((u_id, v_id));
-                }
-                Some(edge_path)
+            let path = find_hierarchy_path(city, src, dst)?;
+            if path.len() >= min_intersections {
+                Some(nodes_to_edges(city, &path))
             } else {
                 None
             }
         })
-        .collect()
+        .collect();
+
+    // 2. Chaotic Local Wanders (ensures secondary & residential streets are sampled)
+    let chaotic_corridors: Vec<Vec<DirectedEdge>> = (0..chaotic_count)
+        .into_par_iter()
+        .filter_map(|_| {
+            let mut rng = rand::rng();
+            let mut curr = *all_node_indices.choose(&mut rng)?;
+            let mut visited = ahash::AHashSet::with_capacity(min_intersections + 10);
+            let mut node_path = Vec::with_capacity(min_intersections + 10);
+            node_path.push(curr);
+            visited.insert(curr);
+
+            for _ in 0..(min_intersections + 15) {
+                let edges: Vec<_> = city.graph.edges_directed(curr, Direction::Outgoing).collect();
+                if edges.is_empty() {
+                    break;
+                }
+
+                // Weighted random walk: 60% follow highway, 40% take any local exit
+                let chosen_edge = if rng.random_bool(0.60) {
+                    edges.iter().min_by(|a, b| {
+                        a.weight()
+                            .highway_type
+                            .hierarchy_weight()
+                            .partial_cmp(&b.weight().highway_type.hierarchy_weight())
+                            .unwrap()
+                    })?
+                } else {
+                    edges.choose(&mut rng)?
+                };
+
+                let next = chosen_edge.target();
+                if visited.contains(&next) {
+                    // Loop avoidance
+                    continue;
+                }
+
+                visited.insert(next);
+                node_path.push(next);
+                curr = next;
+            }
+
+            if node_path.len() >= min_intersections {
+                Some(nodes_to_edges(city, &node_path))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    let mut all_corridors = arterial_corridors;
+    all_corridors.extend(chaotic_corridors);
+    all_corridors
+}
+
+fn nodes_to_edges(city: &CityGraph, nodes: &[NodeIndex]) -> Vec<DirectedEdge> {
+    let mut edges = Vec::with_capacity(nodes.len() - 1);
+    for window in nodes.windows(2) {
+        let u = city.reverse_node_map[&window[0]];
+        let v = city.reverse_node_map[&window[1]];
+        edges.push((u, v));
+    }
+    edges
 }
 
 fn find_hierarchy_path(

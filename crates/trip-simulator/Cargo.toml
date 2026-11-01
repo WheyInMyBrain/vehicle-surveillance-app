@@ -9,3 +9,9 @@ petgraph.workspace = true
 chrono.workspace = true
 rand.workspace = true
 ahash.workspace = true
+serde.workspace = true
+csv.workspace = true
+
+[dev-dependencies]
+osm-loader = { path = "../osm-loader" }
+network-optimizer = { path = "../network-optimizer" }

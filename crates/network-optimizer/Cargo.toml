@@ -13,3 +13,6 @@ rand.workspace = true
 rayon.workspace = true
 ahash.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+osm-loader = { path = "../osm-loader" }

@@ -9,7 +9,7 @@ osm-loader = { path = "../../crates/osm-loader" }
 trip-simulator = { path = "../../crates/trip-simulator" }
 trajectory-resolver = { path = "../../crates/trajectory-resolver" }
 network-optimizer = { path = "../../crates/network-optimizer" }
+surveillance-gui = { path = "../../crates/surveillance-gui" }
 
 rand.workspace = true
-petgraph.workspace = true
 serde_json.workspace = true

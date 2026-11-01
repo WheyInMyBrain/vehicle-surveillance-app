@@ -1,0 +1,14 @@
+[package]
+name = "surveillance-gui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+engine-core = { path = "../engine-core" }
+trajectory-resolver = { path = "../trajectory-resolver" }
+trip-simulator = { path = "../trip-simulator" }
+network-optimizer = { path = "../network-optimizer" }
+
+eframe.workspace = true
+petgraph.workspace = true
+rayon.workspace = true
