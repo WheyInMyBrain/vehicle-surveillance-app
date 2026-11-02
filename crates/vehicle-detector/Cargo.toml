@@ -1,0 +1,14 @@
+[package]
+name = "vehicle-detector"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ort.workspace = true
+ndarray.workspace = true
+image.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+imageproc.workspace = true
+ab_glyph.workspace = true

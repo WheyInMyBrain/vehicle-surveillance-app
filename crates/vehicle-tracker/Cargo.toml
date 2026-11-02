@@ -1,0 +1,14 @@
+[package]
+name = "vehicle-tracker"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+vehicle-detector = { path = "../vehicle-detector" }
+ndarray = { workspace = true }
+thiserror = { workspace = true }
+image = { workspace = true }
+
+[dev-dependencies]
+imageproc = { workspace = true }
+ab_glyph = { workspace = true }
