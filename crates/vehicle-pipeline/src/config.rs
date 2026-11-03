@@ -57,8 +57,8 @@ impl SurveillancePipelineConfig {
             plate_detector: PlateDetectorConfig {
                 confidence_threshold: 0.20,
                 nms_iou_threshold: 0.40,
-                input_width: 640,
-                input_height: 640,
+                input_width: 384,
+                input_height: 384,
                 min_plate_height: 6.0,
                 min_plate_width: 14.0,
                 num_threads: 4,
