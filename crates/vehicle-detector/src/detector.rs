@@ -26,10 +26,10 @@ impl From<ort::Error> for DetectorError {
 
 static ORT_ENV: OnceLock<Result<Arc<Environment>, String>> = OnceLock::new();
 
-fn get_or_init_ort_env() -> Result<Arc<Environment>, DetectorError> {
+pub fn get_or_init_ort_env() -> Result<Arc<Environment>, DetectorError> {
     let env_res = ORT_ENV.get_or_init(|| {
         ort::init()
-            .with_name("vehicle_detector")
+            .with_name("surveillance_env")
             .build()
             .map(Arc::new)
             .map_err(|e| e.to_string())
@@ -70,7 +70,6 @@ pub struct VehicleDetector {
     config: VehicleDetectorConfig,
     input_buffer: Array4<f32>,
 
-    // Reusable scratch vectors for zero heap allocations per frame
     proposals_buf: Vec<DetectedVehicle>,
     areas_buf: Vec<f32>,
     suppressed_buf: Vec<bool>,
@@ -82,7 +81,14 @@ impl VehicleDetector {
         config: VehicleDetectorConfig,
     ) -> Result<Self, DetectorError> {
         let env = get_or_init_ort_env()?;
+        Self::new_with_env(model_path, config, env)
+    }
 
+    pub fn new_with_env<P: AsRef<Path>>(
+        model_path: P,
+        config: VehicleDetectorConfig,
+        env: Arc<Environment>,
+    ) -> Result<Self, DetectorError> {
         let session = Session::builder(&env)
             .map_err(|e| DetectorError::Ort(e.to_string()))?
             .with_optimization_level(GraphOptimizationLevel::Level3)
@@ -108,6 +114,10 @@ impl VehicleDetector {
             areas_buf: Vec::with_capacity(128),
             suppressed_buf: Vec::with_capacity(128),
         })
+    }
+
+    pub fn environment(&self) -> Arc<Environment> {
+        Arc::clone(&self._env)
     }
 
     pub fn config(&self) -> &VehicleDetectorConfig {
@@ -136,7 +146,6 @@ impl VehicleDetector {
             &mut self.input_buffer,
         );
 
-        // In ort 2.0.0-rc.15, Value::from_array requires an owned Array<T, D>
         let input_val = Value::from_array(self.input_buffer.clone())
             .map_err(|e| DetectorError::Ort(e.to_string()))?;
 
@@ -155,7 +164,6 @@ impl VehicleDetector {
         let min_dim = self.config.min_box_dimension;
         let conf_thresh = self.config.confidence_threshold;
 
-        // Case 1: End-to-End tensor [1, N, 6] (x1, y1, x2, y2, conf, class_id)
         if dims.len() == 3 && dims[2] == 6 {
             let num_boxes = dims[1] as usize;
             for i in 0..num_boxes {
@@ -183,9 +191,7 @@ impl VehicleDetector {
                     }
                 }
             }
-        }
-        // Case 2: Standard YOLO Raw Head [1, 84, N]
-        else if dims.len() == 3 && dims[1] >= 84 {
+        } else if dims.len() == 3 && dims[1] >= 84 {
             let num_features = dims[1] as usize;
             let num_proposals = dims[2] as usize;
 
@@ -225,9 +231,7 @@ impl VehicleDetector {
                     }
                 }
             }
-        }
-        // Case 3: Transposed Raw Head [1, N, 84]
-        else if dims.len() == 3 && dims[2] >= 84 {
+        } else if dims.len() == 3 && dims[2] >= 84 {
             let num_proposals = dims[1] as usize;
             let num_features = dims[2] as usize;
 
@@ -282,7 +286,6 @@ impl VehicleDetector {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
 
-        // Fast NMS with reused buffers
         let n = self.proposals_buf.len();
         self.areas_buf.clear();
         self.areas_buf.extend(self.proposals_buf.iter().map(|p| p.area()));

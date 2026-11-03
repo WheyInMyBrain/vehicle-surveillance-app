@@ -3692,6 +3692,64 @@ dependencies = [
 ]
 
 [[package]]
+name = "vehicle-lpocr"
+version = "0.1.0"
+dependencies = [
+ "ab_glyph",
+ "image",
+ "imageproc",
+ "ndarray",
+ "ort",
+ "thiserror 2.0.21",
+ "vehicle-detector",
+ "vehicle-lpr",
+ "vehicle-quality",
+ "vehicle-tracker",
+]
+
+[[package]]
+name = "vehicle-lpr"
+version = "0.1.0"
+dependencies = [
+ "ab_glyph",
+ "image",
+ "imageproc",
+ "ndarray",
+ "ort",
+ "thiserror 2.0.21",
+ "vehicle-detector",
+ "vehicle-quality",
+ "vehicle-tracker",
+]
+
+[[package]]
+name = "vehicle-pipeline"
+version = "0.1.0"
+dependencies = [
+ "ab_glyph",
+ "image",
+ "imageproc",
+ "thiserror 2.0.21",
+ "vehicle-detector",
+ "vehicle-lpocr",
+ "vehicle-lpr",
+ "vehicle-quality",
+ "vehicle-tracker",
+]
+
+[[package]]
+name = "vehicle-quality"
+version = "0.1.0"
+dependencies = [
+ "ab_glyph",
+ "image",
+ "imageproc",
+ "thiserror 2.0.21",
+ "vehicle-detector",
+ "vehicle-tracker",
+]
+
+[[package]]
 name = "vehicle-tracker"
 version = "0.1.0"
 dependencies = [

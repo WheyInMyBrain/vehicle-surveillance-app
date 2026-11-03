@@ -1,0 +1,20 @@
+[package]
+name = "vehicle-pipeline"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+vehicle-detector = { path = "../vehicle-detector" }
+vehicle-tracker = { path = "../vehicle-tracker" }
+vehicle-quality = { path = "../vehicle-quality" }
+vehicle-lpr = { path = "../vehicle-lpr" }
+vehicle-lpocr = { path = "../vehicle-lpocr" }
+
+image = { workspace = true }
+imageproc = { workspace = true }
+ab_glyph = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+imageproc = { workspace = true }
+ab_glyph = { workspace = true }
