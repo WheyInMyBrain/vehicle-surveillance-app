@@ -82,26 +82,27 @@ fn test_track_videos() {
     println!(" Processing Resolution: {}x{} (Fast Testing)", target_width, target_height);
     println!("==================================================");
 
+    // 1. Lower the detector threshold slightly for video streams
     let det_config = VehicleDetectorConfig {
-        confidence_threshold: 0.22,
-        nms_iou_threshold: 0.45,
+        confidence_threshold: 0.18,  // Lowered from 0.22 so approaching vehicles get detected early
+        nms_iou_threshold: 0.50,
         input_width: 640,
         input_height: 640,
-        min_box_dimension: 8.0,
+        min_box_dimension: 6.0,      // Allow small/distant detections on 360p stream
         num_threads: 4,
     };
     let mut detector = VehicleDetector::new(&model_path, det_config)
         .expect("Failed to initialize VehicleDetector");
 
-    // Explicitly set parameters and fallback to Default for all remaining fields
+    // 2. Align ByteTrack thresholds with the fine-tuned model's confidence distribution
     let base_track_config = ByteTrackConfig {
-        track_thresh: 0.25,
-        high_thresh: 0.45,
-        match_thresh: 0.75,
-        max_time_lost: 40,
-        min_hits: 2,
-        class_mismatch_penalty: 0.50,
-        motion_weight: 0.15,
+        track_thresh: 0.18,          // Minimum confidence to be considered for tracking
+        high_thresh: 0.30,           // Lowered from 0.45 so 0.34 confidence detections CAN spawn tracks
+        match_thresh: 0.65,          // Slightly relaxed IoU match threshold for fast-moving targets
+        max_time_lost: 45,           // Tolerate temporary occlusions
+        min_hits: 2,                 // Confirm after 2 consecutive frames
+        class_mismatch_penalty: 0.10, // Relaxed from 0.50 so class flicker doesn't drop the track
+        motion_weight: 0.10,
         ..Default::default()
     };
 

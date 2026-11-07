@@ -1,5 +1,9 @@
-use crate::preprocess::prepare_ocr_tensor;
-use crate::types::OcrResult;
+//! Concrete ONNX Runtime License Plate OCR Engine.
+
+use crate::preprocess::prepare_ocr_tensor_direct;
+use crate::types::{OcrResult, MAX_PLATE_CHARS};
+
+use heapless::Vec as StackVec;
 use image::DynamicImage;
 use ndarray::Array4;
 use ort::environment::Environment;
@@ -14,22 +18,24 @@ use thiserror::Error;
 pub enum OcrError {
     #[error("ONNX Runtime error: {0}")]
     Ort(String),
+    #[error("Tensor error: {0}")]
+    Tensor(&'static str),
     #[error("Invalid OCR model output tensor shape: {0:?}")]
     InvalidOutputShape(Vec<i64>),
 }
 
-impl From<ort::Error> for OcrError {
-    fn from(err: ort::Error) -> Self {
+impl<T> From<ort::Error<T>> for OcrError {
+    fn from(err: ort::Error<T>) -> Self {
         OcrError::Ort(err.to_string())
     }
 }
 
 static ORT_ENV: OnceLock<Result<Arc<Environment>, String>> = OnceLock::new();
 
-fn get_or_init_ort_env() -> Result<Arc<Environment>, OcrError> {
+pub fn get_or_init_ort_env() -> Result<Arc<Environment>, OcrError> {
     let env_res = ORT_ENV.get_or_init(|| {
         ort::init()
-            .with_name("surveillance_env")
+            .with_name("surveillance_lpocr")
             .build()
             .map(Arc::new)
             .map_err(|e| e.to_string())
@@ -41,13 +47,12 @@ fn get_or_init_ort_env() -> Result<Arc<Environment>, OcrError> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct PlateOcrConfig {
     pub img_width: u32,
     pub img_height: u32,
     pub alphabet: &'static str,
     pub pad_char: char,
-    pub max_plate_slots: usize,
     pub num_threads: usize,
 }
 
@@ -58,7 +63,6 @@ impl Default for PlateOcrConfig {
             img_height: 64,
             alphabet: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_",
             pad_char: '_',
-            max_plate_slots: 10,
             num_threads: 2,
         }
     }
@@ -68,7 +72,7 @@ pub struct PlateOcrEngine {
     _env: Arc<Environment>,
     session: Session,
     config: PlateOcrConfig,
-    alphabet_chars: Vec<char>,
+    alphabet_chars: StackVec<char, 64>,
     input_buffer: Array4<u8>,
 }
 
@@ -86,16 +90,11 @@ impl PlateOcrEngine {
         config: PlateOcrConfig,
         env: Arc<Environment>,
     ) -> Result<Self, OcrError> {
-        let session = Session::builder(&env)
-            .map_err(|e| OcrError::Ort(e.to_string()))?
-            .with_optimization_level(GraphOptimizationLevel::Level3)
-            .map_err(|e| OcrError::Ort(e.to_string()))?
-            .with_intra_threads(config.num_threads)
-            .map_err(|e| OcrError::Ort(e.to_string()))?
-            .commit_from_file(model_path)
-            .map_err(|e| OcrError::Ort(e.to_string()))?;
+        let session = Session::builder(&env)?
+            .with_optimization_level(GraphOptimizationLevel::Level3)?
+            .with_intra_threads(config.num_threads)?
+            .commit_from_file(model_path)?;
 
-        // NHWC tensor: [1, 64, 128, 3]
         let input_buffer = Array4::<u8>::zeros((
             1,
             config.img_height as usize,
@@ -103,7 +102,10 @@ impl PlateOcrEngine {
             3,
         ));
 
-        let alphabet_chars = config.alphabet.chars().collect();
+        let mut alphabet_chars: StackVec<char, 64> = StackVec::new();
+        for ch in config.alphabet.chars() {
+            let _ = alphabet_chars.push(ch);
+        }
 
         Ok(Self {
             _env: env,
@@ -114,21 +116,27 @@ impl PlateOcrEngine {
         })
     }
 
+    pub fn environment(&self) -> Arc<Environment> {
+        Arc::clone(&self._env)
+    }
+
+    pub fn config(&self) -> &PlateOcrConfig {
+        &self.config
+    }
+
+    /// Performs zero-allocation character recognition on a candidate license plate crop.
     pub fn recognize(&mut self, plate_crop: &DynamicImage) -> Result<OcrResult, OcrError> {
-        prepare_ocr_tensor(
+        prepare_ocr_tensor_direct(
             plate_crop,
             self.config.img_width,
             self.config.img_height,
             &mut self.input_buffer,
-        );
+        )
+        .map_err(OcrError::Tensor)?;
 
-        let input_val = Value::from_array(self.input_buffer.clone())
-            .map_err(|e| OcrError::Ort(e.to_string()))?;
+        let input_val = Value::from_array(self.input_buffer.clone())?;
 
-        let outputs = self
-            .session
-            .run(ort::inputs![input_val])
-            .map_err(|e| OcrError::Ort(e.to_string()))?;
+        let outputs = self.session.run(ort::inputs![input_val])?;
 
         let (out_shape, data) = outputs[0]
             .try_extract_tensor::<f32>()
@@ -143,37 +151,35 @@ impl PlateOcrEngine {
         let num_slots = dims[1] as usize;
         let vocab_size = dims[2] as usize;
 
-        let mut recognized_text = String::with_capacity(num_slots);
-        let mut char_confidences = Vec::with_capacity(num_slots);
+        let mut result = OcrResult::default();
         let mut total_confidence = 0.0f32;
         let mut char_count = 0usize;
 
         for slot in 0..num_slots {
             let offset = slot * vocab_size;
+            if offset + vocab_size > data.len() {
+                break;
+            }
             let slot_logits = &data[offset..offset + vocab_size];
 
+            // 1. Numerically stable Softmax & Argmax
             let mut max_logit = f32::NEG_INFINITY;
-            for &logit in slot_logits {
-                if logit > max_logit {
-                    max_logit = logit;
-                }
-            }
-
-            let mut sum_exp = 0.0f32;
             let mut best_idx = 0;
-            let mut best_val = f32::NEG_INFINITY;
 
             for (idx, &logit) in slot_logits.iter().enumerate() {
-                let exp = (logit - max_logit).exp();
-                sum_exp += exp;
-                if logit > best_val {
-                    best_val = logit;
+                if logit > max_logit {
+                    max_logit = logit;
                     best_idx = idx;
                 }
             }
 
+            let mut sum_exp = 0.0f32;
+            for &logit in slot_logits {
+                sum_exp += (logit - max_logit).exp();
+            }
+
             let prob = if sum_exp > 0.0 {
-                (best_val - max_logit).exp() / sum_exp
+                1.0 / sum_exp
             } else {
                 0.0
             };
@@ -181,23 +187,21 @@ impl PlateOcrEngine {
             let ch = self.alphabet_chars.get(best_idx).copied().unwrap_or(self.config.pad_char);
 
             if ch != self.config.pad_char {
-                recognized_text.push(ch);
-                char_confidences.push((ch, prob));
-                total_confidence += prob;
-                char_count += 1;
+                if result.text.len() < MAX_PLATE_CHARS {
+                    let _ = result.text.push(ch);
+                    let _ = result.char_confidences.push((ch, prob));
+                    total_confidence += prob;
+                    char_count += 1;
+                }
             }
         }
 
-        let avg_confidence = if char_count > 0 {
+        result.confidence = if char_count > 0 {
             total_confidence / char_count as f32
         } else {
             0.0
         };
 
-        Ok(OcrResult {
-            text: recognized_text,
-            confidence: avg_confidence,
-            char_confidences,
-        })
+        Ok(result)
     }
 }

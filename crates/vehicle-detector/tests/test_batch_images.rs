@@ -1,5 +1,5 @@
 use ab_glyph::FontArc;
-use image::{open, Rgb, RgbImage};
+use image::{open, GenericImageView, Rgb, RgbImage};
 use imageproc::drawing::{draw_hollow_rect_mut, draw_text_mut};
 use imageproc::rect::Rect;
 use std::fs::{create_dir_all, read, read_dir};
@@ -128,7 +128,8 @@ fn test_detect_mumbai_test_images() {
                 VehicleClass::Car => Rgb([0, 220, 50]),
                 VehicleClass::Truck => Rgb([0, 140, 255]),
                 VehicleClass::Bus => Rgb([255, 160, 0]),
-                VehicleClass::Motorcycle => Rgb([220, 30, 220]),
+                VehicleClass::TwoWheeler => Rgb([220, 30, 220]),
+                VehicleClass::AutoRickshaw => Rgb([255, 255, 0]),
             };
 
             for thickness in 0..3 {
@@ -142,8 +143,16 @@ fn test_detect_mumbai_test_images() {
                 draw_text_mut(&mut annotated, color, (x + 4).max(0), (y - 18).max(0), 18.0, f, &label);
             }
 
-            // Export vehicle crop for downstream crates
-            let crop = d.crop_from(&raw_img);
+            let (img_w, img_h) = raw_img.dimensions();
+            let cx1 = (d.x1().max(0.0) as u32).min(img_w);
+            let cy1 = (d.y1().max(0.0) as u32).min(img_h);
+            let cx2 = (d.x2().max(0.0) as u32).min(img_w);
+            let cy2 = (d.y2().max(0.0) as u32).min(img_h);
+
+            let cw = cx2.saturating_sub(cx1).max(1);
+            let ch = cy2.saturating_sub(cy1).max(1);
+
+            let crop = raw_img.crop_imm(cx1, cy1, cw, ch);
             let crop_path = crops_dir.join(format!("{}_crop_{}_{}.jpg", stem, i + 1, d.class.as_str()));
             let _ = crop.save(&crop_path);
         }

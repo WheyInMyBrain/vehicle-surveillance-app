@@ -106,7 +106,6 @@ fn test_end_to_end_plate_detection() {
         num_threads: 4,
     };
 
-    // Share the exact same ONNX Runtime environment
     let mut plate_detector = PlateDetector::new_with_env(
         &plate_model,
         plate_config,
@@ -144,12 +143,13 @@ fn test_end_to_end_plate_detection() {
 
         let quality_config = QualityConfig {
             min_sharpness: 25.0,
-            min_resolution: 90, // Require minimum 90px vehicle crop for readable plate
+            min_resolution: 90,
             brightness_range: (30.0, 230.0),
             min_contrast: 0.10,
+            border_margin: 8.0,
         };
         let auditor = QualityAuditor::new(quality_config);
-        let mut quality_manager = TrackQualityManager::new(auditor, 3, 10.0);
+        let mut quality_manager = TrackQualityManager::new(auditor, 10.0);
 
         let mut decoder_child = Command::new("ffmpeg")
             .args([
@@ -178,8 +178,10 @@ fn test_end_to_end_plate_detection() {
         while decoder_stdout.read_exact(&mut frame_buf).is_ok() {
             frame_idx += 1;
 
-            let rgb_img = RgbImage::from_raw(native_w, native_h, frame_buf.clone())
-                .expect("Failed to build image");
+            let rgb_img = match RgbImage::from_raw(native_w, native_h, std::mem::take(&mut frame_buf)) {
+                Some(im) => im,
+                None => break,
+            };
             let dyn_img = DynamicImage::ImageRgb8(rgb_img);
 
             let detections = vehicle_detector.detect(&dyn_img).expect("Detector error");
@@ -188,6 +190,10 @@ fn test_end_to_end_plate_detection() {
             for trk in &tracks {
                 unique_tracks.insert(trk.track_id);
                 quality_manager.process_frame(frame_idx, trk, &dyn_img);
+            }
+
+            if let DynamicImage::ImageRgb8(im) = dyn_img {
+                frame_buf = im.into_raw();
             }
         }
 

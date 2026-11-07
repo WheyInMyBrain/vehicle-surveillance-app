@@ -1,3 +1,5 @@
+//! Complete configuration specification for the multi-stage surveillance pipeline.
+
 use std::path::PathBuf;
 use vehicle_detector::VehicleDetectorConfig;
 use vehicle_lpocr::PlateOcrConfig;
@@ -17,11 +19,9 @@ pub struct SurveillancePipelineConfig {
     pub plate_detector: PlateDetectorConfig,
     pub ocr: PlateOcrConfig,
 
-    /// Number of golden crops to retain in memory per vehicle track
-    pub golden_crops_per_track: usize,
-    /// Minimum composite score required for candidate consideration
+    /// Minimum composite optical quality required to schedule LPR/OCR
     pub min_quality_score: f32,
-    /// Path to a true-type font for high-legibility rendering
+    /// Optional path to an external TrueType font for debugging annotations
     pub custom_font_path: Option<PathBuf>,
 }
 
@@ -53,19 +53,19 @@ impl SurveillancePipelineConfig {
                 min_resolution: 80,
                 brightness_range: (30.0, 230.0),
                 min_contrast: 0.10,
+                border_margin: 8.0,
             },
             plate_detector: PlateDetectorConfig {
                 confidence_threshold: 0.20,
                 nms_iou_threshold: 0.40,
-                input_width: 384,
-                input_height: 384,
+                input_width: 640,
+                input_height: 640,
                 min_plate_height: 6.0,
                 min_plate_width: 14.0,
                 num_threads: 4,
             },
             ocr: PlateOcrConfig::default(),
 
-            golden_crops_per_track: 3,
             min_quality_score: 10.0,
             custom_font_path: None,
         }

@@ -1,13 +1,18 @@
 [package]
 name = "vehicle-detector"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
+
+[features]
+default = ["std"]
+std = ["ndarray/std", "image"]
 
 [dependencies]
 ort.workspace = true
-ndarray.workspace = true
-image.workspace = true
+ndarray.workspace = true 
+image = { workspace = true, optional = true }
 thiserror.workspace = true
+heapless.workspace = true
 
 [dev-dependencies]
 imageproc.workspace = true

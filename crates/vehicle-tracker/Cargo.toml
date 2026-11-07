@@ -1,14 +1,18 @@
 [package]
 name = "vehicle-tracker"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 vehicle-detector = { path = "../vehicle-detector" }
-ndarray = { workspace = true }
+heapless = { workspace = true }
 thiserror = { workspace = true }
-image = { workspace = true }
+image = { workspace = true, optional = true }
 
 [dev-dependencies]
 imageproc = { workspace = true }
 ab_glyph = { workspace = true }
+
+[features]
+default = ["std"]
+std = ["vehicle-detector/std", "image"]

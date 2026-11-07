@@ -43,6 +43,11 @@ fn test_video_stream_pipeline() {
     create_dir_all(&out_dir).expect("Failed to create video output dir");
 
     let vehicle_model = root.join("data/models/yolo26n.onnx");
+    let vehicle_model = if vehicle_model.exists() {
+        vehicle_model
+    } else {
+        root.join("data/models/yolo26s.onnx")
+    };
     let plate_model = root.join("data/models/license-plate-finetune-v1n.onnx");
     let ocr_model = root.join("data/models/cct_s_v2_global.onnx");
 
@@ -112,8 +117,10 @@ fn test_video_stream_pipeline() {
         while decoder_stdout.read_exact(&mut frame_buf).is_ok() {
             frame_idx += 1;
 
-            let rgb_img = RgbImage::from_raw(native_w, native_h, frame_buf.clone())
-                .expect("Failed to construct image");
+            let rgb_img = match RgbImage::from_raw(native_w, native_h, std::mem::take(&mut frame_buf)) {
+                Some(im) => im,
+                None => break,
+            };
             let dyn_img = DynamicImage::ImageRgb8(rgb_img);
 
             let (result, annotated) = pipeline.process_frame(&dyn_img).expect("Frame processing failed");
@@ -123,6 +130,10 @@ fn test_video_stream_pipeline() {
             if frame_idx % 50 == 0 {
                 print!("\r  [{}] Frames: {:>4} | Active Tracks: {:>2} | Total Plates Read: {:>2}", video_name, frame_idx, result.active_track_count, result.plates_read_count);
                 std::io::stdout().flush().unwrap();
+            }
+
+            if let DynamicImage::ImageRgb8(im) = dyn_img {
+                frame_buf = im.into_raw();
             }
         }
 

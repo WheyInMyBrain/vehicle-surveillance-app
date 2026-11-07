@@ -19,15 +19,25 @@ eframe = { version = "0.37.0", default-features = false, features = ["default_fo
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 chrono = { version = "0.4.45", features = ["serde"] }
+heapless = "0.9.3"
 
 rayon = "1.10" 
 thiserror = "2.0.21"
 rand = "0.10.3"
 ahash = "0.8.11"
 log = "0.4.34"
+libc = "0.2.191"
 
 ort = { version = "=2.0.0-rc.15", features = ["ndarray"] }
-ndarray = "0.17.2"
+ndarray = { version = "0.17.2", default-features = false }
 image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
 imageproc = { version = "0.27.0", features = ["text"] }
 ab_glyph = "0.2.32"
+
+[profile.release]
+opt-level = 3
+lto = "fat"             # Aggressive link-time optimization across all workspace crates
+codegen-units = 1       # Reduces parallelism during compilation to allow maximal inlining
+panic = "abort"         # Removes unwinding tables, shrinks binary size, eliminates panic bloat
+strip = true            # Strips symbols for minimal memory footprint
+debug = false

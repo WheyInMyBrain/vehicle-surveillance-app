@@ -1,16 +1,18 @@
-use crate::kalman::KalmanFilter;
-use crate::types::TrackState;
-use std::sync::atomic::{AtomicU64, Ordering};
-use vehicle_detector::{DetectedVehicle, VehicleClass};
+//! Individual vehicle tracklet state machine.
+
+use crate::core::kalman::KalmanFilter;
+use crate::core::types::TrackState;
+use core::sync::atomic::{AtomicU64, Ordering};
+use vehicle_detector::{BoundingBox, DetectedVehicle, VehicleClass};
 
 static GLOBAL_TRACK_ID: AtomicU64 = AtomicU64::new(1);
 
-#[inline]
+#[inline(always)]
 pub fn get_next_track_id() -> u64 {
     GLOBAL_TRACK_ID.fetch_add(1, Ordering::Relaxed)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct STrack {
     pub track_id: u64,
     pub class: VehicleClass,
@@ -44,7 +46,7 @@ impl STrack {
     }
 
     #[inline(always)]
-    pub fn to_bbox(&self) -> [f32; 4] {
+    pub fn to_bbox(&self) -> BoundingBox {
         KalmanFilter::z_to_bbox(&self.mean)
     }
 
@@ -94,10 +96,12 @@ impl STrack {
         self.time_since_update = 0;
     }
 
+    #[inline(always)]
     pub fn mark_lost(&mut self) {
         self.state = TrackState::Lost;
     }
 
+    #[inline(always)]
     pub fn mark_removed(&mut self) {
         self.state = TrackState::Removed;
     }

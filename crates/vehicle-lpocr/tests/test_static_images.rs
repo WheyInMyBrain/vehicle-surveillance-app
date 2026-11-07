@@ -57,7 +57,6 @@ fn test_static_car_images_pipeline() {
     println!(" STATIC IMAGE PIPELINE: DETECT VEHICLE -> QUALITY -> DETECT PLATE -> OCR ");
     println!("================================================================================");
 
-    // 1. Initialize Vehicle Detector
     let det_config = VehicleDetectorConfig {
         confidence_threshold: 0.25,
         nms_iou_threshold: 0.45,
@@ -71,7 +70,6 @@ fn test_static_car_images_pipeline() {
 
     let shared_env = vehicle_detector.environment();
 
-    // 2. Initialize Plate Detector (Sharing same ORT env)
     let plate_config = PlateDetectorConfig {
         confidence_threshold: 0.20,
         nms_iou_threshold: 0.40,
@@ -84,14 +82,11 @@ fn test_static_car_images_pipeline() {
     let mut plate_detector = PlateDetector::new_with_env(&plate_model, plate_config, shared_env.clone())
         .expect("Failed to initialize PlateDetector");
 
-    // 3. Initialize CCT Plate OCR (NHWC format)
     let ocr_config = PlateOcrConfig::default();
     let mut ocr_engine = PlateOcrEngine::new_with_env(&ocr_model, ocr_config, shared_env)
         .expect("Failed to initialize PlateOcrEngine");
 
-    // 4. Initialize Quality Auditor (Metrics inspector)
     let quality_auditor = QualityAuditor::new(QualityConfig::default());
-
     let image_names = ["1.jpg", "2.jpg", "3.jpg"];
 
     for img_name in &image_names {
@@ -106,11 +101,10 @@ fn test_static_car_images_pipeline() {
 
         let dyn_img = open(&img_path).expect("Failed to open image");
         let (img_w, img_h) = (dyn_img.width(), dyn_img.height());
-        println!("Resolution: {}x{}", img_w, img_h);
+        let raw_rgb = dyn_img.to_rgb8();
 
         let t_total = Instant::now();
 
-        // Step A: Detect Vehicles
         let t0 = Instant::now();
         let vehicles = vehicle_detector.detect(&dyn_img).expect("Vehicle inference failed");
         println!("  1. Vehicle Detector: Found {} vehicles in {:.2?}", vehicles.len(), t0.elapsed());
@@ -123,11 +117,8 @@ fn test_static_car_images_pipeline() {
             let vw = vehicle.width();
             let vh = vehicle.height();
 
-            // Extract vehicle crop
-            let vehicle_crop = vehicle.crop_from(&dyn_img);
-
-            // Step B: Run Quality Assessment
-            let q_metrics = quality_auditor.evaluate(&vehicle_crop, &vehicle.bbox, img_w, img_h);
+            // Direct zero-copy quality evaluation
+            let q_metrics = quality_auditor.evaluate_direct(raw_rgb.as_raw(), img_w, img_h, &vehicle.bbox);
             println!(
                 "     Vehicle #{:<2} [{}]: Res: {:.0}x{:.0} | Sharpness: {:>5.1} | Contrast: {:.2}",
                 v_idx + 1,
@@ -138,26 +129,22 @@ fn test_static_car_images_pipeline() {
                 q_metrics.contrast
             );
 
-            // Draw Vehicle Bounding Box (Green)
             let v_rect = Rect::at(vx1 as i32, vy1 as i32).of_size(vw.max(1.0) as u32, vh.max(1.0) as u32);
             draw_hollow_rect_mut(&mut annotated, v_rect, Rgb([0, 255, 100]));
-            draw_hollow_rect_mut(&mut annotated, Rect::at((vx1 + 1.0) as i32, (vy1 + 1.0) as i32).of_size(vw.max(2.0) as u32 - 1, vh.max(2.0) as u32 - 1), Rgb([0, 255, 100]));
 
             if let Some(ref f) = font {
                 let v_label = format!("{}: {:.0}%", vehicle.class.as_str(), vehicle.confidence * 100.0);
                 draw_text_mut(&mut annotated, Rgb([0, 255, 100]), (vx1 as i32 + 4).max(0), (vy1 as i32 - 16).max(0), 16.0, f, &v_label);
             }
 
-            // Step C: Plate Detection inside the vehicle crop
+            let vehicle_crop = vehicle.crop_from(&dyn_img);
             let t_plate = Instant::now();
             let plates = plate_detector.detect(&vehicle_crop).expect("Plate detection failed");
 
             for (p_idx, plate) in plates.iter().enumerate() {
-                // Step D: Run OCR on the plate crop
                 let plate_crop = plate.crop_from(&vehicle_crop);
                 let ocr_result = ocr_engine.recognize(&plate_crop).expect("OCR failed");
 
-                // Translate local vehicle crop coordinates back to full image space
                 let gx1 = vx1 + plate.x1();
                 let gy1 = vy1 + plate.y1();
                 let pw = plate.width();
@@ -167,28 +154,23 @@ fn test_static_car_images_pipeline() {
                     "        Plate #{:<2}: Plate Conf: {:>4.1}% | Text: {:<10} | OCR Conf: {:>4.1}% (Found in {:.2?})",
                     p_idx + 1,
                     plate.confidence * 100.0,
-                    if ocr_result.text.is_empty() { "<unreadable>" } else { &ocr_result.text },
+                    if ocr_result.as_str().is_empty() { "<unreadable>" } else { ocr_result.as_str() },
                     ocr_result.confidence * 100.0,
                     t_plate.elapsed()
                 );
 
-                // Draw License Plate Bounding Box (Bright Yellow, thick)
                 let p_rect = Rect::at(gx1 as i32, gy1 as i32).of_size(pw.max(1.0) as u32, ph.max(1.0) as u32);
                 draw_hollow_rect_mut(&mut annotated, p_rect, Rgb([255, 235, 0]));
-                draw_hollow_rect_mut(&mut annotated, Rect::at((gx1 + 1.0) as i32, (gy1 + 1.0) as i32).of_size(pw.max(2.0) as u32 - 1, ph.max(2.0) as u32 - 1), Rgb([255, 235, 0]));
 
-                // Draw Text Banner with Black Background for high legibility
                 if let Some(ref f) = font {
-                    let display_text = if !ocr_result.text.is_empty() {
-                        format!("{} ({:.0}%)", ocr_result.text, ocr_result.confidence * 100.0)
+                    let display_text = if !ocr_result.as_str().is_empty() {
+                        format!("{} ({:.0}%)", ocr_result.as_str(), ocr_result.confidence * 100.0)
                     } else {
                         format!("Plate: {:.0}%", plate.confidence * 100.0)
                     };
 
                     let text_x = (gx1 as i32).max(2);
                     let text_y = (gy1 as i32 - 20).max(2);
-
-                    // Background box behind plate text
                     let banner_w = (display_text.len() as u32 * 10) + 8;
                     draw_filled_rect_mut(&mut annotated, Rect::at(text_x, text_y).of_size(banner_w, 18), Rgb([0, 0, 0]));
                     draw_text_mut(&mut annotated, Rgb([255, 235, 0]), text_x + 4, text_y + 1, 15.0, f, &display_text);
@@ -198,11 +180,6 @@ fn test_static_car_images_pipeline() {
 
         let out_file = out_dir.join(format!("{}_annotated.jpg", Path::new(img_name).file_stem().unwrap().to_string_lossy()));
         annotated.save(&out_file).expect("Failed to save annotated image");
-
         println!("  -> Completed in {:.2?}. Output saved to: {:?}", t_total.elapsed(), out_file);
     }
-
-    println!("\n================================================================================");
-    println!(" All annotated test images exported to: {:?}", out_dir);
-    println!("================================================================================\n");
 }

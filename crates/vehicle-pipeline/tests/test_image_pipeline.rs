@@ -14,12 +14,17 @@ fn test_static_images_pipeline() {
     create_dir_all(&out_dir).expect("Failed to create image output dir");
 
     let vehicle_model = root.join("data/models/yolo26n.onnx");
+    let vehicle_model = if vehicle_model.exists() {
+        vehicle_model
+    } else {
+        root.join("data/models/yolo26s.onnx")
+    };
     let plate_model = root.join("data/models/license-plate-finetune-v1n.onnx");
     let ocr_model = root.join("data/models/cct_s_v2_global.onnx");
 
-    assert!(vehicle_model.exists(), "Missing yolo26n.onnx");
-    assert!(plate_model.exists(), "Missing license-plate-finetune-v1n.onnx");
-    assert!(ocr_model.exists(), "Missing cct_s_v2_global.onnx");
+    assert!(vehicle_model.exists(), "Missing vehicle detector model");
+    assert!(plate_model.exists(), "Missing license plate detector model");
+    assert!(ocr_model.exists(), "Missing OCR model");
 
     println!("\n==================================================");
     println!(" RUNNING STATIC IMAGE PIPELINE BENCHMARK ");
@@ -33,7 +38,7 @@ fn test_static_images_pipeline() {
     for img_name in &image_names {
         let img_path = data_tests.join(img_name);
         if !img_path.exists() {
-            println!(" [!] Image {:?} not found, skipping...", img_name);
+            println!(" [!] Image {:?} not found, skipping...", img_path);
             continue;
         }
 
@@ -52,7 +57,7 @@ fn test_static_images_pipeline() {
         );
 
         for v in &result.vehicles {
-            let ocr_str = v.plate_ocr.as_ref().map(|o| format!("{} ({:.1}%)", o.text, o.confidence * 100.0)).unwrap_or_else(|| "None".into());
+            let ocr_str = v.plate_ocr.as_ref().map(|o| format!("{} ({:.1}%)", o.as_str(), o.confidence * 100.0)).unwrap_or_else(|| "None".into());
             println!("  -> Vehicle #{:<2} [{}]: Plate: {}", v.track_id, v.class.as_str(), ocr_str);
         }
 

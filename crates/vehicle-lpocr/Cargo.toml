@@ -3,14 +3,19 @@ name = "vehicle-lpocr"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["std"]
+std = ["vehicle-detector/std", "image", "ndarray/std"]
+
 [dependencies]
+vehicle-detector = { path = "../vehicle-detector" }
+heapless = { workspace = true }
 ort = { workspace = true }
-ndarray = { workspace = true }
-image = { workspace = true }
+ndarray = { workspace = true, default-features = false }
+image = { workspace = true, optional = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-vehicle-detector = { path = "../vehicle-detector" }
 vehicle-tracker = { path = "../vehicle-tracker" }
 vehicle-quality = { path = "../vehicle-quality" }
 vehicle-lpr = { path = "../vehicle-lpr" }
