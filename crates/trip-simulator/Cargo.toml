@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-engine-core = { path = "../engine-core" }
+road-network-core = { path = "../road-network-core" }
 petgraph.workspace = true
 chrono.workspace = true
 rand.workspace = true
@@ -13,5 +13,5 @@ serde.workspace = true
 csv.workspace = true
 
 [dev-dependencies]
-osm-loader = { path = "../osm-loader" }
-network-optimizer = { path = "../network-optimizer" }
+road-osm-loader = { path = "../../crates/road-osm-loader" }
+camera-network-optimizer = { path = "../camera-network-optimizer" }

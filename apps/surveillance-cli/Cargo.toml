@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-engine-core = { path = "../../crates/engine-core" }
-osm-loader = { path = "../../crates/osm-loader" }
-trip-simulator = { path = "../../crates/trip-simulator" }
-trajectory-resolver = { path = "../../crates/trajectory-resolver" }
-network-optimizer = { path = "../../crates/network-optimizer" }
+road-network-core = { path = "../../crates/road-network-core" }
+road-osm-loader = { path = "../../crates/road-osm-loader" }
+sim-trip-generator = { path = "../../crates/sim-trip-generator" }
+tracking-resolver = { path = "../../crates/tracking-resolver" }
+camera-network-optimizer = { path = "../../crates/camera-network-optimizer" }
 surveillance-gui = { path = "../../crates/surveillance-gui" }
 
 rand.workspace = true

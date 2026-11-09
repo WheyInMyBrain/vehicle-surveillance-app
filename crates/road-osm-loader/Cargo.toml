@@ -1,0 +1,11 @@
+[package]
+name = "road-osm-loader"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+road-network-core = { path = "../road-network-core" }
+osmpbf.workspace = true
+rayon.workspace = true
+ahash.workspace = true
+thiserror.workspace = true

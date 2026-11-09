@@ -1,0 +1,11 @@
+[package]
+name = "road-traffic-tensor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+road-network-core = { path = "../road-network-core" }
+road-graph-loader = { path = "../road-graph-loader" }
+chrono.workspace = true
+ahash.workspace = true
+thiserror.workspace = true

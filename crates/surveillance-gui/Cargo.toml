@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-engine-core = { path = "../engine-core" }
-trajectory-resolver = { path = "../trajectory-resolver" }
-trip-simulator = { path = "../trip-simulator" }
-network-optimizer = { path = "../network-optimizer" }
+road-network-core = { path = "../road-network-core" }
+tracking-resolver = { path = "../tracking-resolver" }
+sim-trip-generator = { path = "../sim-trip-generator" }
+camera-network-optimizer = { path = "../camera-network-optimizer" }
 
 eframe.workspace = true
 petgraph.workspace = true

@@ -1,0 +1,10 @@
+[package]
+name = "sim-kinematics"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+road-network-core = { path = "../road-network-core" }
+chrono.workspace = true
+rand.workspace = true
+serde.workspace = true

@@ -1,0 +1,13 @@
+[package]
+name = "road-graph-loader"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+road-network-core = { path = "../road-network-core" }
+ahash.workspace = true
+thiserror.workspace = true
+memmap2 = "0.9"
+
+[dev-dependencies]
+criterion = "0.5"

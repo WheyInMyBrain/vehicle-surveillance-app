@@ -1,0 +1,29 @@
+[package]
+name = "road-network-compiler"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "road_network_compiler"
+path = "src/lib.rs"
+
+[[bin]]
+name = "compile_graph"
+path = "src/bin/compile_graph.rs"
+
+[[bin]]
+name = "audit_coverage"
+path = "src/bin/audit_coverage.rs"
+
+[dependencies]
+road-network-core = { path = "../road-network-core" }
+road-osm-loader = { path = "../road-osm-loader" }
+petgraph.workspace = true
+chrono.workspace = true
+ahash.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+parquet.workspace = true
+arrow.workspace = true
+rayon.workspace = true
+geo.workspace = true

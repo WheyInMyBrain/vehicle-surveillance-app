@@ -1,0 +1,21 @@
+[package]
+name = "tracking-resolver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+road-network-core = { path = "../road-network-core" }
+road-graph-loader = { path = "../road-graph-loader" }
+road-traffic-tensor = { path = "../road-traffic-tensor" }
+chrono.workspace = true
+ahash.workspace = true
+ordered-float.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+camera-network-optimizer = { path = "../camera-network-optimizer" }
+sim-trip-generator = { path = "../sim-trip-generator" }
+sim-kinematics = { path = "../sim-kinematics" }
+rand.workspace = true
+rayon.workspace = true

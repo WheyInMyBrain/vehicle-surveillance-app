@@ -1,0 +1,21 @@
+[package]
+name = "sim-trip-generator"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+road-network-core = { path = "../road-network-core" }
+road-graph-loader = { path = "../road-graph-loader" }
+road-traffic-tensor = { path = "../road-traffic-tensor" }
+camera-network-optimizer = { path = "../camera-network-optimizer" }
+sim-kinematics = { path = "../sim-kinematics" }
+chrono.workspace = true
+rand.workspace = true
+ahash.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ordered-float.workspace = true
+rayon.workspace = true
+
+[dev-dependencies]
+criterion.workspace = true

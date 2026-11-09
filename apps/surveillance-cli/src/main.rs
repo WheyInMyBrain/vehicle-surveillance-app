@@ -8,7 +8,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   MUMBAI SURVEILLANCE & TRAJECTORY ENGINE        ");
     println!("==================================================");
 
-    let pbf_path = PathBuf::from("data/western-zone-261028.osm.pbf");
+    let pbf_path = PathBuf::from("data/road/western-zone-261028.osm.pbf");
 
     println!("Target PBF Path: {:?}", pbf_path);
 

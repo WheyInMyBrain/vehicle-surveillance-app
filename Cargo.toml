@@ -20,6 +20,8 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 chrono = { version = "0.4.45", features = ["serde"] }
 heapless = "0.9.3"
+parquet = { version = "60.1.0", default-features = false, features = ["arrow", "zstd"] }
+arrow = "60.1.0"
 
 rayon = "1.10" 
 thiserror = "2.0.21"
@@ -27,6 +29,7 @@ rand = "0.10.3"
 ahash = "0.8.11"
 log = "0.4.34"
 libc = "0.2.191"
+criterion = "0.8.2"
 
 ort = { version = "=2.0.0-rc.15", features = ["ndarray"] }
 ndarray = { version = "0.17.2", default-features = false }

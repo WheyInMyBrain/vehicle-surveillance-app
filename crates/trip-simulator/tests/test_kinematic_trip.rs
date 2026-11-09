@@ -10,7 +10,7 @@ use trip_simulator::{generate_chaotic_trip, CameraNetwork, GtfsCorridorSpeeds, T
 fn test_chaotic_trip_kinematics() {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let root = manifest_dir.parent().unwrap().parent().unwrap();
-    let pbf_path = root.join("data/western-zone-261028.osm.pbf");
+    let pbf_path = root.join("data/road/western-zone-261028.osm.pbf");
     let gtfs_dir = root.join("data/gtfs");
 
     let bkc_bbox = Some((19.0400, 72.8400, 19.0900, 72.9000));
