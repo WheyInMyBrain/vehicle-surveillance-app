@@ -5,7 +5,7 @@ pub use flow::{calculate_traversal_cost, interpolate_flow, TraversalStatus};
 pub use road_graph_loader::{EdgeDescriptor, LinkFlowSnapshot, RoadGraph};
 pub use time::TemporalCoord;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use road_network_core::NodeId;
 
 pub struct TrafficTensorEngine<'a> {
@@ -35,6 +35,36 @@ impl<'a> TrafficTensorEngine<'a> {
         calculate_traversal_cost(desc.length_m, desc.maxspeed_kmh, &curr, &next, &coord)
     }
 
+    /// Evaluates edge flow with an explicit telemetry ingestion delay
+    #[inline]
+    pub fn evaluate_edge_with_lag(
+        &self,
+        edge_idx: usize,
+        timestamp: &DateTime<Utc>,
+        lag: Duration,
+    ) -> TraversalStatus {
+        let lagged_time = *timestamp - lag;
+        self.evaluate_edge_at(edge_idx, &lagged_time)
+    }
+
+    /// Fetches the raw completed snapshot from the prior completed 5-minute interval
+    #[inline]
+    pub fn prior_completed_flow_snapshot(
+        &self,
+        edge_idx: usize,
+        timestamp: &DateTime<Utc>,
+    ) -> LinkFlowSnapshot {
+        let coord = TemporalCoord::from_datetime(timestamp);
+        let (prior_day, prior_bin) = coord.prior_completed_bin();
+        self.graph.get_flow_by_index(edge_idx, prior_day, prior_bin)
+    }
+
+    /// Direct access to the raw flow snapshot at exact coord
+    #[inline(always)]
+    pub fn flow_snapshot_at(&self, edge_idx: usize, coord: &TemporalCoord) -> LinkFlowSnapshot {
+        self.graph.get_flow_by_index(edge_idx, coord.day, coord.bin)
+    }
+
     /// Convenience lookup for (u, v)
     #[inline]
     pub fn evaluate_traversal(
@@ -59,16 +89,9 @@ impl<'a> TrafficTensorEngine<'a> {
         desc.length_m / speed_mps
     }
 
-    /// Direct access to the physical edge descriptor
     #[inline(always)]
     pub fn edge_descriptor(&self, edge_idx: usize) -> &EdgeDescriptor {
         self.graph.edge_descriptor(edge_idx)
-    }
-
-    /// Direct access to the raw flow snapshot
-    #[inline(always)]
-    pub fn flow_snapshot_at(&self, edge_idx: usize, coord: &TemporalCoord) -> LinkFlowSnapshot {
-        self.graph.get_flow_by_index(edge_idx, coord.day, coord.bin)
     }
 
     #[inline(always)]
