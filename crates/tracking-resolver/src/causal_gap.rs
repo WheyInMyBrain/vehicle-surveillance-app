@@ -38,14 +38,14 @@ pub struct CausalGapWorkspace {
 impl CausalGapWorkspace {
     pub fn new() -> Self {
         Self {
-            unobserved_camera_edges: AHashSet::with_capacity(64),
+            unobserved_camera_edges: AHashSet::with_capacity(128),
             config: ResolverConfig::default(),
         }
     }
 
     pub fn with_config(config: ResolverConfig) -> Self {
         Self {
-            unobserved_camera_edges: AHashSet::with_capacity(64),
+            unobserved_camera_edges: AHashSet::with_capacity(128),
             config,
         }
     }
@@ -99,7 +99,9 @@ pub fn resolve_camera_gap(
         let desc = graph.edge_descriptor(edge_idx);
         let snapshot = tensor.graph().get_flow_by_index(edge_idx, prior_day, prior_bin);
         let min_t = min_physical_edge_duration(desc, snapshot.free_flow_kmh, config);
-        let flow_kmh = (snapshot.speed_kmh as f32).min(resolve_legal_maxspeed_kmh(desc)).max(6.0);
+        let flow_kmh = (snapshot.speed_kmh as f32)
+            .min(resolve_legal_maxspeed_kmh(desc))
+            .max(6.0);
         let exp_t = desc.length_m / (flow_kmh / 3.6);
 
         let variance = (exp_t * (1.2 - snapshot.confidence as f32)).powi(2) + 36.0;
@@ -129,10 +131,8 @@ pub fn resolve_camera_gap(
 
     // Layer 1: Isochrone Filter
     let mut valid_edges = compute_bidirectional_isochrone_hull(graph, exit_node, entry_node, dt_seconds, config);
-    
-    // Fallback: If isochrone hull is empty (e.g. extreme speeding anomaly), widen the search
     if valid_edges.is_empty() {
-        valid_edges = compute_bidirectional_isochrone_hull(graph, exit_node, entry_node, dt_seconds * 3.0 + 60.0, config);
+        valid_edges = compute_bidirectional_isochrone_hull(graph, exit_node, entry_node, dt_seconds * 2.5 + 45.0, config);
     }
     if valid_edges.is_empty() {
         return Vec::new();
@@ -158,7 +158,11 @@ pub fn resolve_camera_gap(
     let mut intermediate_eval = Vec::with_capacity(ensemble_routes.len());
 
     for cand in ensemble_routes {
-        let edge_descs: Vec<_> = cand.edge_indices.iter().map(|&idx| graph.edge_descriptor(idx)).collect();
+        let edge_descs: Vec<_> = cand
+            .edge_indices
+            .iter()
+            .map(|&idx| graph.edge_descriptor(idx))
+            .collect();
         let min_physical = compute_path_min_physical_duration(&edge_descs, 8.0, 8.0, config);
 
         let mut total_distance = 0.0f32;
@@ -173,7 +177,10 @@ pub fn resolve_camera_gap(
             let desc = edge_descs[i];
             let edge_idx = cand.edge_indices[i];
             let snapshot = tensor.graph().get_flow_by_index(edge_idx, prior_day, prior_bin);
-            let speed_mps = ((snapshot.speed_kmh as f32).min(resolve_legal_maxspeed_kmh(desc)).max(6.0)) / 3.6;
+            let speed_mps = ((snapshot.speed_kmh as f32)
+                .min(resolve_legal_maxspeed_kmh(desc))
+                .max(6.0))
+                / 3.6;
 
             total_distance += desc.length_m;
             let t_e = desc.length_m / speed_mps;
@@ -196,20 +203,24 @@ pub fn resolve_camera_gap(
             if i < edge_descs.len() - 1 {
                 let next_desc = edge_descs[i + 1];
                 let deflection = junction_deflection_deg(desc, next_desc);
-                let (j_delay, j_pen) = junction_delay_and_penalty(deflection, snapshot.jam_factor, config);
+                let (j_delay, j_pen) =
+                    junction_delay_and_penalty(deflection, snapshot.jam_factor, config);
                 expected_time += j_delay;
                 turn_penalty_total += j_pen;
-                hierarchy_penalty_total += hierarchy_transition_penalty(desc.tier, next_desc.tier);
+                hierarchy_penalty_total +=
+                    hierarchy_transition_penalty(desc.tier, next_desc.tier);
             }
         }
 
         let (is_dwell, excess_sec, ln_p_time) =
             evaluate_dwell_mixture(dt_seconds, expected_time, variance.sqrt(), config);
         let camera_pen = negative_camera_penalty(unobserved_cameras, config);
-        let dark_ratio = if total_distance > 0.0 { dark_dist / total_distance } else { 0.0 };
+        let dark_ratio = if total_distance > 0.0 {
+            dark_dist / total_distance
+        } else {
+            0.0
+        };
 
-        // Soft penalization for speed limit violations instead of hard rejection,
-        // so excessive speeding reaches evaluate_leg_anomaly.
         let speed_violation_pen = if dt_seconds < min_physical * 0.85 {
             -25.0
         } else {

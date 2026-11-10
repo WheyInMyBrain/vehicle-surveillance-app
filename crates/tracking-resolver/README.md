@@ -365,7 +365,9 @@ The engine was evaluated on a full-scale municipal road graph of Mumbai containi
 
 Testing across varying camera dropout rates:
 
-Sample space 1000
+#### Empirical Stress-Test Benchmarks
+
+##### Fleet Sample Size: 1,000 Vehicles (~370k Total Sightings)
 
 | Dropout Rate (%) | Operational Context | Captures Processed | Throughput (sightings/s) | Avg Latency (µs/gap) | Precision (Mean / P95) | Recall (Mean / P95) | Loitering / Speed Alerts |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -375,18 +377,15 @@ Sample space 1000
 | **25.0%** | Degraded Network Grid | 29,226 | **165,293** | **6.05 µs** | 99.0% / 95.7% | 97.7% / 90.1% | 53 / 269 |
 | **50.0%** | Sparse Corridors / Hardware Failures | 19,542 | **83,451** | **11.98 µs** | 96.5% / 81.1% | 94.4% / 80.8% | 80 / 192 |
 
-Sample space 50000
+##### Fleet Sample Size: 50,000 Vehicles (18.8M Total Sightings)
 
-┌──────────┬───────────┬──────────────┬──────────────┬──────────────┬──────────────┬────────────┐
-│ Dropout  │ Captures  │ Throughput   │ Avg Latency  │ Precision    │ Recall       │ Loiter/Spd │
-│ Rate (%) │ Processed │ (sightings/s)│ (µs/gap)     │ (Mean/P95)   │ (Mean/P95)   │ Alerts     │
-├──────────┼───────────┼──────────────┼──────────────┼──────────────┼──────────────┼────────────┤
-│     0.0% │   4594442 │       310347 │      3.22 µs │  99.7%/98.4% │  99.3%/95.7% │ 6822/33644 │
-│     3.0% │   4453893 │       369357 │      2.71 µs │  99.6%/97.8% │  99.2%/95.4% │ 6759/32771 │
-│    10.0% │   4138355 │       290799 │      3.44 µs │  99.4%/97.0% │  98.9%/94.5% │ 6503/30902 │
-│    25.0% │   3439782 │       196465 │      5.09 µs │  98.8%/94.6% │  98.0%/91.5% │ 6529/27023 │
-│    50.0% │   2296051 │        94579 │     10.57 µs │  97.0%/82.2% │  94.6%/82.5% │ 8057/19895 │
-└──────────┴───────────┴──────────────┴──────────────┴──────────────┴──────────────┴────────────┘
+| Dropout Rate (%) | Operational Context | Captures Processed | Throughput (sightings/s) | Avg Latency (µs/gap) | Precision (Mean / P95) | Recall (Mean / P95) | Loitering / Speed Alerts |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **0.0%** | Pristine Sensor Grid | 4,559,014 | **419,491** | **2.38 µs** | 99.7% / 98.6% | 99.3% / 95.7% | 6,428 / 33,426 |
+| **3.0%** | Nominal Daily Baseline | 4,421,681 | **392,541** | **2.55 µs** | 99.6% / 98.1% | 99.2% / 95.3% | 6,585 / 32,918 |
+| **10.0%** | Inclement Weather / Glare | 4,105,052 | **319,877** | **3.13 µs** | 99.5% / 97.1% | 98.9% / 94.4% | 6,415 / 30,743 |
+| **25.0%** | Degraded Network Grid | 3,427,777 | **226,328** | **4.42 µs** | 99.0% / 95.5% | 98.0% / 91.4% | 6,473 / 27,192 |
+| **50.0%** | Sparse Corridors / Hardware Failures | 2,283,662 | **114,914** | **8.70 µs** | 97.5% / 85.9% | 94.6% / 82.5% | 8,015 / 19,859 |
 
 ### Single-Trip HMM Beam Tracker Audit
 
