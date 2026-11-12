@@ -1,0 +1,17 @@
+[package]
+name = "camera-network"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+road-network-core = { path = "../road-network-core" }
+road-graph-loader = { path = "../road-graph-loader" }
+petgraph.workspace = true
+ordered-float.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+rand.workspace = true
+rayon.workspace = true
+ahash.workspace = true
+thiserror.workspace = true
+chrono = { workspace = true, optional = true }

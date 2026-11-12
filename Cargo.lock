@@ -651,6 +651,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "camera-network"
+version = "0.1.0"
+dependencies = [
+ "ahash",
+ "chrono",
+ "ordered-float",
+ "petgraph",
+ "rand 0.10.3",
+ "rayon",
+ "road-graph-loader",
+ "road-network-core",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "camera-network-optimizer"
 version = "0.1.0"
 dependencies = [
